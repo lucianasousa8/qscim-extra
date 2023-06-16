@@ -28,7 +28,6 @@ const MongoClient = require('mongodb').MongoClient
 
 // mandatory plugin initialization - start
 const path = require('path')
-let ScimGateway = null
 let ScimGateway = require('./scimgateway')
 const scimgateway = new ScimGateway()
 const pluginName = path.basename(__filename, '.js')

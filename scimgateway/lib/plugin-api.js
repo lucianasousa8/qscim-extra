@@ -34,7 +34,7 @@ const querystring = require('querystring')
 
 // mandatory plugin initialization - start
 const path = require('path')
-let   ScimGateway = require('./scimgateway')
+let ScimGateway = require('./scimgateway')
 const scimgateway = new ScimGateway()
 const pluginName = path.basename(__filename, '.js')
 const configDir = path.join(__dirname, '..', 'config')
