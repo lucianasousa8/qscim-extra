@@ -29,6 +29,7 @@ const countries = require('../lib/countries')
 const { createChecker } = require('is-in-subnet')
 const { createTerminus } = require('@godaddy/terminus')
 require('events').EventEmitter.prototype._maxListeners = Infinity
+const {verifyRules} = require('./interceptors/verifyRules')
 
 /**
  * @constructor
@@ -629,6 +630,18 @@ app.use(cors({ origin: '*', credentials: true }));
     formTypes: { form: ['application/x-www-form-urlencoded'] },
     jsonLimit: (!config.payloadSize) ? undefined : config.payloadSize // default '1mb'
   }))
+  
+  // Middleware
+  app.use(async (ctx, next) => {
+    return new Promise((resolve) => {
+    const { method} = ctx.request
+      if(method !== 'POST') {
+        return resolve(next())
+      }
+      return resolve(verifyRules(ctx, next))  
+    })
+  })
+  
   app.use(ipAllowList)
   app.use(auth) // authentication before routes
   app.use(verifyContentType)
