@@ -15,12 +15,11 @@ function createEngine(type, conditions, ctx, next) {
       return;
     },
     onFailure() {
-      ctx.status = 400;
+      let errorBody = ctx?.body || [];
       ctx.body = {
-        message: "error while verifying rules",
-        rules: conditionsString,
+        rules: [...errorBody, ...conditionsString],
       };
-      return ctx;
+      throw new Error("verification failed");
     },
     event: {
       type: "message",

@@ -632,14 +632,21 @@ app.use(cors({ origin: '*', credentials: true }));
   }))
   
   // Middleware
-  app.use((ctx, next) => {
-    return new Promise((resolve) => {
+  app.use(async (ctx, next) => {
+    return new Promise(async(resolve) => {
     const { method } = ctx.request
       if(method !== 'POST') {
-        return resolve(next())
+        resolve(next());
+        return;
       }
 
-       resolve(verifyRules(ctx, next))  
+      let res = await verifyRules(ctx, next)
+      if(res){
+        resolve(next());
+      } else{
+        resolve(ctx)
+      }
+
     })
   })
   
