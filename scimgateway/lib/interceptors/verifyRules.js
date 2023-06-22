@@ -32,11 +32,7 @@ async function verifyRules(ctx, next) {
     })
   );
 
-  if (results.every((item) => item === true)) {
-    return true;
-  } else {
-    return false;
-  }
+  return results.every((item) => item === true)
 }
 
 module.exports = { verifyRules };
