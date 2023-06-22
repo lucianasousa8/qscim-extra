@@ -12,7 +12,7 @@ function createEngine(type, conditions, ctx, next) {
       [type]: conditions,
     },
     onSuccess() {
-      return true;
+      return;
     },
     onFailure() {
       ctx.status = 400;
@@ -31,3 +31,4 @@ function createEngine(type, conditions, ctx, next) {
 }
 
 module.exports = { createEngine };
+
