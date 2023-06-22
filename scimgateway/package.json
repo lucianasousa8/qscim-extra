@@ -10,9 +10,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "koa-cors": "^0.0.16",
-    "ldapjs": "^2.3.3",
-    "node-red-node-ldap": "^1.0.0",
-    "scimgateway": "^4.1.14"
+     "json-rules-engine": "^6.1.2",
+      "koa-cors": "^0.0.16",
+      "scimgateway": "^4.1.14",
   }
 }
