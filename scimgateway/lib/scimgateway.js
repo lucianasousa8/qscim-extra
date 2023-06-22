@@ -634,7 +634,7 @@ app.use(cors({ origin: '*', credentials: true }));
   // Middleware
   app.use(async (ctx, next) => {
     return new Promise((resolve) => {
-    const { method} = ctx.request
+    const { method } = ctx.request
       if(method !== 'POST') {
         return resolve(next())
       }
