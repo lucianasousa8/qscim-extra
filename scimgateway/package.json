@@ -12,6 +12,6 @@
   "dependencies": {
      "json-rules-engine": "^6.1.2",
       "koa-cors": "^0.0.16",
-      "scimgateway": "^4.1.14",
+      "scimgateway": "^4.1.14"
   }
 }
