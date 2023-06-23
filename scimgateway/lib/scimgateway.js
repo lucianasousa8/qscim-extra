@@ -635,7 +635,7 @@ app.use(cors({ origin: '*', credentials: true }));
   app.use(async (ctx, next) => {
     return new Promise(async(resolve) => {
     const { method } = ctx.request
-      if(method !== 'POST') {
+      if(!['POST', 'PUT', 'PATCH'].includes(method)) {
         resolve(next());
         return;
       }
