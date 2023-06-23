@@ -30,6 +30,7 @@ const { createChecker } = require('is-in-subnet')
 const { createTerminus } = require('@godaddy/terminus')
 require('events').EventEmitter.prototype._maxListeners = Infinity
 const {verifyRules} = require('./interceptors/verifyRules')
+const {fetchApi} = require('./interceptors/fetchApi')
 
 /**
  * @constructor
@@ -640,8 +641,15 @@ app.use(cors({ origin: '*', credentials: true }));
         return;
       }
 
-      let res = await verifyRules(ctx, next)
-      if(res){
+      let apiRes = await fetchApi(ctx, next)
+      if(apiRes){
+        
+      } else{
+        resolve(ctx)
+      }
+
+      let rulesRes = await verifyRules(ctx, next)
+      if(rulesRes){
         resolve(next());
       } else{
         resolve(ctx)
