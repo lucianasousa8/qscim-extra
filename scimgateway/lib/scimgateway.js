@@ -337,8 +337,8 @@ const ScimGateway = function () {
           res.statusMessage = ctx.response.message
           res.body = ctx.response.body
         }
-        logger.error(`${gwName}[${pluginName}] ${ellapsed} ${ctx.request.ipcli} ${userName} ${ctx.request.method} ${ctx.request.href} Inbound = ${JSON.stringify(ctx.request.body)} Outbound = ${JSON.stringify(res)}${(config.log.loglevel.file === 'debug' && ctx.request.url !== '/ping') ? '\n' : ''}`)
-      } else logger.info(`${gwName}[${pluginName}] ${ellapsed} ${ctx.request.ipcli} ${userName} ${ctx.request.method} ${ctx.request.href} Inbound = ${JSON.stringify(ctx.request.body)} Outbound = ${JSON.stringify(res)}${(config.log.loglevel.file === 'debug' && ctx.request.url !== '/ping') ? '\n' : ''}`)
+        logger.error(`${gwName}[${pluginName}] ${ellapsed} ${ctx.request.ipcli} ${userName} ${ctx.request.method} ${ctx.request.href} Inbound = ${JSON.stringify(ctx.request.body)} Outbound = ${JSON.stringify(res)}${(config.log.loglevel.file === 'debug' && ctx.request.url !== '/healthcheck') ? '\n' : ''}`)
+      } else logger.info(`${gwName}[${pluginName}] ${ellapsed} ${ctx.request.ipcli} ${userName} ${ctx.request.method} ${ctx.request.href} Inbound = ${JSON.stringify(ctx.request.body)} Outbound = ${JSON.stringify(res)}${(config.log.loglevel.file === 'debug' && ctx.request.url !== '/healthcheck') ? '\n' : ''}`)
       requestCounter += 1 // logged on exit (not win process termination)
     }
     if (ctx.response.body && typeof ctx.response.body === 'object' && ctx.response.status !== 401) ctx.set('Content-Type', 'application/scim+json; charset=utf-8')
@@ -347,7 +347,7 @@ const ScimGateway = function () {
   // start auth methods - used by auth
   const basic = (baseEntity, method, authType, authToken, url) => {
     return new Promise((resolve, reject) => { // basic auth
-      if (url === '/ping' || url.endsWith('/oauth/token') || url === '/_ah/start' || url === '/_ah/stop' || url === '/favicon.ico') resolve(true) // no auth
+      if (url === '/healthcheck' || url.endsWith('/oauth/token') || url === '/_ah/start' || url === '/_ah/stop' || url === '/favicon.ico') resolve(true) // no auth
       if (authType !== 'Basic') resolve(false)
       if (!foundBasic) resolve(false)
       if (foundPassThrough && this.authPassThroughAllowed) resolve(false)
@@ -668,8 +668,8 @@ app.use(cors({ origin: '*', credentials: true }));
     logger.error(`${gwName}[${pluginName}] Koa method: ${ctx.method} url: ${ctx.origin + ctx.path} body: ${JSON.stringify(ctx.request.body)} error: ${err.message}`)
   })
 
-  router.get('/ping', async (ctx) => { // auth not required
-    const tx = 'hello'
+  router.get('/healthcheck', async (ctx) => { // auth not required
+    const tx = 'Server is running'
     ctx.set('Content-Type', 'text/plain; charset=utf-8')
     ctx.body = tx
   })
