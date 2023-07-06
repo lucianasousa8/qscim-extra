@@ -15,12 +15,7 @@ const prisma = new PrismaClient();
 
 // mandatory plugin initialization - start
 const path = require("path");
-let ScimGateway = null;
-try {
-  ScimGateway = require("scimgateway");
-} catch (err) {
-  ScimGateway = require("./scimgateway");
-}
+let ScimGateway = require('./scimgateway')
 const scimgateway = new ScimGateway();
 const pluginName = path.basename(__filename, ".js");
 const configDir = path.join(__dirname, "..", "config");
