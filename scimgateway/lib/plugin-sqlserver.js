@@ -33,7 +33,7 @@ const validScimAttr = [
   "name.givenName",
   "name.middleName",
   "name.familyName",
-"id",  // "emails",         // accepts all multivalues for this key
+  "id", // "emails",         // accepts all multivalues for this key
   "emails.work", // accepts multivalues if type value equal work (lowercase)
   // "phoneNumbers",
   "phoneNumbers.work",
@@ -83,7 +83,14 @@ scimgateway.getUsers = async (baseEntity, getObj, attributes, ctx) => {
       ["id", "userName", "externalId"].includes(getObj.attribute)
     ) {
       // mandatory - unique filtering - single unique user to be returned - correspond to getUser() in versions < 4.x.x
-      filter = { UserID: getObj.value };
+
+      filter = {
+        ...scimgateway.endpointMapper(
+          "outbound",
+          { id: getObj.value },
+          config.map.user
+        )[0],
+      };
     } else if (getObj.operator === "eq" && getObj.attribute === "group.value") {
       // optional - only used when groups are member of users, not default behavior - correspond to getGroupUsers() in versions < 4.x.x
       throw new Error(
