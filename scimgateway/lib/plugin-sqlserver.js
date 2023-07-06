@@ -170,13 +170,13 @@ scimgateway.createUser = async (baseEntity, userObj, ctx) => {
 
   try {
     return await new Promise((resolve, reject) => {
-      const notValid = scimgateway.notValidAttributes(userObj, validScimAttr);
-      if (notValid) {
-        const err = Error(
-          `unsupported scim attributes: ${notValid} (supporting only these attributes: ${validScimAttr.toString()})`
-        );
-        return reject(err);
-      }
+      // const notValid = scimgateway.notValidAttributes(userObj, validScimAttr);
+      // if (notValid) {
+      //   const err = Error(
+      //     `unsupported scim attributes: ${notValid} (supporting only these attributes: ${validScimAttr.toString()})`
+      //   );
+      //   return reject(err);
+      // }
 
       async function main() {
         const newUser = scimgateway.endpointMapper(
@@ -258,13 +258,13 @@ scimgateway.modifyUser = async (baseEntity, id, attrObj, ctx) => {
 
   try {
     return await new Promise((resolve, reject) => {
-      const notValid = scimgateway.notValidAttributes(attrObj, validScimAttr);
-      if (notValid) {
-        const err = Error(
-          `unsupported scim attributes: ${notValid} (supporting only these attributes: ${validScimAttr.toString()})`
-        );
-        return reject(err);
-      }
+      // const notValid = scimgateway.notValidAttributes(attrObj, validScimAttr);
+      // if (notValid) {
+      //   const err = Error(
+      //     `unsupported scim attributes: ${notValid} (supporting only these attributes: ${validScimAttr.toString()})`
+      //   );
+      //   return reject(err);
+      // }
 
       async function main() {
         const updatedUser = scimgateway.endpointMapper(
