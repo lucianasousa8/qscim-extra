@@ -1,26 +1,9 @@
 // =================================================================================
 // File:    plugin-api.js
 //
-// Author:  Jarle Elshaug
+// Author:  Samuel Vianna
 //
-// Purpose: Demonstrate scimgateway api functionality by using a REST based plugin
-//          Using /api ScimGateway transfer "as is" to plugin and returns plugin result by adding
-//          {"meta": {"result": "success"}}
-//          or
-//          {"meta": {"result": "error"}}
-//
-//          This plugin becomes what you it to be
-//
-// Test prereq: Internet connection towards baseUrl defined for testing purpose (http://fakerestapi.azurewebsites.net)
-//
-// Supported by scimgateway:
-//  GET /api
-//  GET /api?queries
-//  GET /api/{id}
-//  POST /api + body
-//  PUT /api/{id} + body
-//  PATCH /api/{id} + body
-//  DELETE /api/{id}
+// Purpose: communicate with a REST API that uses SCIM Protocol
 //
 // =================================================================================
 
@@ -67,14 +50,8 @@ scimgateway.createUser = async (baseEntity, userObj, ctx) => {
 
       async function main() {
         const method = "POST";
-        const path = "/users";
-        const response = await doRequest(
-          baseEntity,
-          method,
-          path,
-          body,
-          ctx
-        );
+        const path = config.entity[baseEntity].userRoute || "/users";
+        const response = await doRequest(baseEntity, method, path, body, ctx);
         return response.body;
       }
 
@@ -115,14 +92,9 @@ scimgateway.modifyUser = async (baseEntity, id, attrObj, ctx) => {
 
       async function main() {
         const method = "PUT";
-        const path = `/users/${id}`;
-        const response = await doRequest(
-          baseEntity,
-          method,
-          path,
-          body,
-          ctx
-        );
+        const basePath = config.entity[baseEntity].userRoute || "/users";
+        const path = `${basePath}/${id}`;
+        const response = await doRequest(baseEntity, method, path, body, ctx);
         return response.body;
       }
 
@@ -152,7 +124,6 @@ scimgateway.getUsers = async (baseEntity, getObj, attributes, ctx) => {
       getObj ? JSON.stringify(getObj) : ""
     } attributes=${attributes}`
   );
-
 
   let filter;
 
@@ -201,10 +172,11 @@ scimgateway.getUsers = async (baseEntity, getObj, attributes, ctx) => {
 
       async function main() {
         async function getRequest() {
+          const basePath = config.entity[baseEntity].userRoute || "/users";
           const method = "GET";
           const body = null;
           if (filter.id) {
-            const path = `/users/${filter.id}`;
+            const path = `/${basePath}/${filter.id}`;
             const response = await doRequest(
               baseEntity,
               method,
@@ -214,7 +186,7 @@ scimgateway.getUsers = async (baseEntity, getObj, attributes, ctx) => {
             );
             return [response.body];
           } else {
-            const path = "/users";
+            const path = basePath;
             const response = await doRequest(
               baseEntity,
               method,
@@ -266,11 +238,11 @@ scimgateway.deleteUser = async (baseEntity, id, ctx) => {
     return await new Promise((resolve, reject) => {
       async function main() {
         const method = "DELETE";
-        const path = `/users/${id}`;
+        const basePath = config.entity[baseEntity].userRoute || "/users";
+        const path = `${basePath}/${id}`;
         const body = null;
         const response = await doRequest(baseEntity, method, path, body, ctx);
         return response.body;
-       
       }
 
       main()
@@ -310,14 +282,8 @@ scimgateway.createGroup = async (baseEntity, groupObj, ctx) => {
 
       async function main() {
         const method = "POST";
-        const path = "/groups";
-        const response = await doRequest(
-          baseEntity,
-          method,
-          path,
-          body,
-          ctx
-        );
+        const path = config.entity[baseEntity].groupRoute || "/groups";
+        const response = await doRequest(baseEntity, method, path, body, ctx);
         return response.body;
       }
 
@@ -358,14 +324,9 @@ scimgateway.modifyGroup = async (baseEntity, id, attrObj, ctx) => {
 
       async function main() {
         const method = "PUT";
-        const path = `/groups/${id}`;
-        const response = await doRequest(
-          baseEntity,
-          method,
-          path,
-          body,
-          ctx
-        );
+        const basePath = config.entity[baseEntity].groupRoute || "/groups";
+        const path = `${basePath}/${id}`;
+        const response = await doRequest(baseEntity, method, path, body, ctx);
         return response.body;
       }
 
@@ -444,9 +405,10 @@ scimgateway.getGroups = async (baseEntity, getObj, attributes, ctx) => {
       async function main() {
         async function getRequest() {
           const method = "GET";
+          const basePath = config.entity[baseEntity].groupRoute || "/groups";
           const body = null;
           if (filter.id) {
-            const path = `/groups/${filter.id}`;
+            const path = `${basePath}/${filter.id}`;
             const response = await doRequest(
               baseEntity,
               method,
@@ -456,7 +418,7 @@ scimgateway.getGroups = async (baseEntity, getObj, attributes, ctx) => {
             );
             return [response.body];
           } else {
-            const path = "/groups";
+            const path = basePath;
             const response = await doRequest(
               baseEntity,
               method,
@@ -508,11 +470,11 @@ scimgateway.deleteGroup = async (baseEntity, id, ctx) => {
     return await new Promise((resolve, reject) => {
       async function main() {
         const method = "DELETE";
-        const path = `/groups/${id}`;
+        const basePath = config.entity[baseEntity].groupRoute || "/groups";
+        const path = `/${basePath}/${id}`;
         const body = null;
         const response = await doRequest(baseEntity, method, path, body, ctx);
         return response.body;
-       
       }
 
       main()
@@ -900,4 +862,3 @@ process.on("SIGTERM", () => {
 process.on("SIGINT", () => {
   // Ctrl+C
 });
-
