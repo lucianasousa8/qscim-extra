@@ -645,7 +645,7 @@ const loadFile = async (config, type) => {
   const worksheet = workbook.getWorksheet(config.connection[type].page);
 
   let headers = [];
-  if (config.connection[type].headerOnFirstLine) {
+  if (config.connection[type].headerOnFirstRow) {
     worksheet.getRow(1).eachCell((cell) => {
       headers.push({
         header: cell.value,
