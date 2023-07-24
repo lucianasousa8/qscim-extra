@@ -1,7 +1,7 @@
 // =================================================================================
 // File:    plugin-worksheet.js
 //
-// Author: Samuel Vianna
+// Author: Qriar Labs
 //
 // Purpose: Connect with worksheets (xlsx and csv files)
 //

@@ -1,7 +1,7 @@
 // =================================================================================
 // File:    plugin-sqlserver.js
 //
-// Author:  Samuel Vianna
+// Author:  Qriar Labs
 //
 // Purpose: SQL user-provisioning
 //

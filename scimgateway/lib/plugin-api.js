@@ -1,7 +1,7 @@
 // =================================================================================
 // File:    plugin-api.js
 //
-// Author:  Samuel Vianna
+// Author:  Qriar Labs
 //
 // Purpose: communicate with a REST API that uses SCIM Protocol
 //
