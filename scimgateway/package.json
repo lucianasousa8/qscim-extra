@@ -11,13 +11,13 @@
   "license": "ISC",
   "dependencies": {
     "@prisma/client": "^4.16.2",
+    "exceljs": "^4.0.3",
+    "flat-db": "^4.0.0",
     "json-rules-engine": "^6.1.2",
     "koa-cors": "^0.0.16",
-    "scimgateway": "^4.1.14",
-    "exceljs": "^4.0.3"
+    "scimgateway": "^4.1.14"
   },
   "devDependencies": {
     "prisma": "^4.16.2"
   }
 }
-
