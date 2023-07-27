@@ -60,7 +60,7 @@ Object.keys(config.map.user).forEach((item, index) => {
 console.log(userSchema);
 
 // create user collection with schema
-const User = new FlatDB.Collection(config.connection.title, userSchema);
+const User = new FlatDB.Collection(config.connection.fileName, userSchema);
 
 // =================================================
 // getUsers
