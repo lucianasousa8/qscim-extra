@@ -33,7 +33,7 @@ const FlatDB = require("flat-db");
 
 // configure path to storage dir
 FlatDB.configure({
-  dir: `/opt/qscim/data/${config.connection.workspace}/data`,
+  dir: `/home/node/app/data/${config.connection.workspace}/data`,
 });
 
 function getDefaultSchemaValue(type) {
