@@ -15,7 +15,7 @@ const prisma = new PrismaClient();
 
 // mandatory plugin initialization - start
 const path = require("path");
-let ScimGateway = require('./scimgateway')
+let ScimGateway = require("./scimgateway");
 const scimgateway = new ScimGateway();
 const pluginName = path.basename(__filename, ".js");
 const configDir = path.join(__dirname, "..", "config");
@@ -45,6 +45,9 @@ if (config?.connection?.authentication?.options?.password) {
   );
   config.connection.authentication.options.password = sqlPassword;
 }
+
+const userSchema = prisma[config.connection.options.userTableName];
+const groupSchema = prisma[config.connection.options.groupTableName];
 
 // =================================================
 // getUsers
@@ -78,7 +81,6 @@ scimgateway.getUsers = async (baseEntity, getObj, attributes, ctx) => {
       ["id", "userName", "externalId"].includes(getObj.attribute)
     ) {
       // mandatory - unique filtering - single unique user to be returned - correspond to getUser() in versions < 4.x.x
-
       filter = {
         ...scimgateway.endpointMapper(
           "outbound",
@@ -122,7 +124,7 @@ scimgateway.getUsers = async (baseEntity, getObj, attributes, ctx) => {
       };
 
       async function main() {
-        const rows = await prisma.user.findMany({ where: filter });
+        const rows = await userSchema.findMany({ where: filter });
 
         for (const row in rows) {
           const scimUser = scimgateway.endpointMapper(
@@ -141,7 +143,7 @@ scimgateway.getUsers = async (baseEntity, getObj, attributes, ctx) => {
         })
         .catch(async (err) => {
           const e = new Error(
-            `exploreUsers MSSQL client connect error: ${err.message}`
+            `exploreUsers SQL Server client connect error: ${err.message}`
           );
           await prisma.$disconnect();
           return reject(e);
@@ -180,7 +182,7 @@ scimgateway.createUser = async (baseEntity, userObj, ctx) => {
           config.map.user
         )[0];
 
-        await prisma.user.create({ data: newUser });
+        await userSchema.create({ data: newUser });
       }
 
       main()
@@ -190,7 +192,7 @@ scimgateway.createUser = async (baseEntity, userObj, ctx) => {
         })
         .catch(async (err) => {
           const e = new Error(
-            `exploreUsers MSSQL client connect error: ${err.message}`
+            `createUser SQL Server client connect error: ${err.message}`
           );
           await prisma.$disconnect();
           return reject(e);
@@ -213,7 +215,7 @@ scimgateway.deleteUser = async (baseEntity, id, ctx) => {
   try {
     return await new Promise((resolve, reject) => {
       async function main() {
-        await prisma.user.delete({
+        await userSchema.delete({
           where: scimgateway.endpointMapper(
             "outbound",
             { id },
@@ -229,7 +231,7 @@ scimgateway.deleteUser = async (baseEntity, id, ctx) => {
         })
         .catch(async (err) => {
           const e = new Error(
-            `deleteUser MSSQL client connect error: ${err.message}`
+            `deleteUser SQL Server client connect error: ${err.message}`
           );
           await prisma.$disconnect();
           return reject(e);
@@ -253,14 +255,6 @@ scimgateway.modifyUser = async (baseEntity, id, attrObj, ctx) => {
 
   try {
     return await new Promise((resolve, reject) => {
-      // const notValid = scimgateway.notValidAttributes(attrObj, validScimAttr);
-      // if (notValid) {
-      //   const err = Error(
-      //     `unsupported scim attributes: ${notValid} (supporting only these attributes: ${validScimAttr.toString()})`
-      //   );
-      //   return reject(err);
-      // }
-
       async function main() {
         const updatedUser = scimgateway.endpointMapper(
           "outbound",
@@ -268,7 +262,7 @@ scimgateway.modifyUser = async (baseEntity, id, attrObj, ctx) => {
           config.map.user
         )[0];
 
-        await prisma.user.update({
+        await userSchema.update({
           where: scimgateway.endpointMapper(
             "outbound",
             { id },
@@ -285,7 +279,7 @@ scimgateway.modifyUser = async (baseEntity, id, attrObj, ctx) => {
         })
         .catch(async (err) => {
           const e = new Error(
-            `modifyUser MSSQL client connect error: ${err.message}`
+            `modifyUser SQL Server client connect error: ${err.message}`
           );
           await prisma.$disconnect();
           return reject(e);
@@ -319,6 +313,7 @@ scimgateway.getGroups = async (baseEntity, getObj, attributes, ctx) => {
     } attributes=${attributes}`
   );
 
+  let filter;
   // mandatory if-else logic - start
   if (getObj.operator) {
     if (
@@ -326,6 +321,13 @@ scimgateway.getGroups = async (baseEntity, getObj, attributes, ctx) => {
       ["id", "displayName", "externalId"].includes(getObj.attribute)
     ) {
       // mandatory - unique filtering - single unique user to be returned - correspond to getUser() in versions < 4.x.x
+      filter = {
+        ...scimgateway.endpointMapper(
+          "outbound",
+          { id: getObj.value },
+          config.map.group
+        )[0],
+      };
     } else if (
       getObj.operator === "eq" &&
       getObj.attribute === "members.value"
@@ -342,7 +344,43 @@ scimgateway.getGroups = async (baseEntity, getObj, attributes, ctx) => {
   }
   // mandatory if-else logic - end
 
-  return { Resources: [] }; // groups not supported - returning empty Resources
+  try {
+    return await new Promise((resolve, reject) => {
+      const ret = {
+        // itemsPerPage will be set by scimgateway
+        Resources: [],
+        totalResults: null,
+      };
+
+      async function main() {
+        const rows = await groupSchema.findMany({ where: filter });
+
+        for (const row in rows) {
+          const scimGroup = scimgateway.endpointMapper(
+            "inbound",
+            rows[row],
+            config.map.group
+          )[0];
+          ret.Resources.push(scimGroup);
+        }
+      }
+
+      main()
+        .then(async () => {
+          await prisma.$disconnect();
+          resolve(ret); // all explored users
+        })
+        .catch(async (err) => {
+          const e = new Error(
+            `exploreGroups SQL Server client connect error: ${err.message}`
+          );
+          await prisma.$disconnect();
+          return reject(e);
+        });
+    }); // Promise
+  } catch (err) {
+    throw new Error(`${action} error: ${err.message}`);
+  }
 };
 
 // =================================================
@@ -355,7 +393,35 @@ scimgateway.createGroup = async (baseEntity, groupObj, ctx) => {
       groupObj
     )}`
   );
-  throw new Error(`${action} error: ${action} is not supported`);
+
+  try {
+    return await new Promise((resolve, reject) => {
+      async function main() {
+        const newGroup = scimgateway.endpointMapper(
+          "outbound",
+          groupObj,
+          config.map.group
+        )[0];
+
+        await groupSchema.create({ data: newGroup });
+      }
+
+      main()
+        .then(async () => {
+          await prisma.$disconnect();
+          resolve(null);
+        })
+        .catch(async (err) => {
+          const e = new Error(
+            `createGroup SQL Server client connect error: ${err.message}`
+          );
+          await prisma.$disconnect();
+          return reject(e);
+        });
+    }); // Promise
+  } catch (err) {
+    throw new Error(`${action} error: ${err.message}`);
+  }
 };
 
 // =================================================
@@ -366,7 +432,35 @@ scimgateway.deleteGroup = async (baseEntity, id, ctx) => {
   scimgateway.logger.debug(
     `${pluginName}[${baseEntity}] handling "${action}" id=${id}`
   );
-  throw new Error(`${action} error: ${action} is not supported`);
+
+  try {
+    return await new Promise((resolve, reject) => {
+      async function main() {
+        await groupSchema.delete({
+          where: scimgateway.endpointMapper(
+            "outbound",
+            { id },
+            config.map.group
+          )[0],
+        });
+      }
+
+      main()
+        .then(async () => {
+          await prisma.$disconnect();
+          resolve(null);
+        })
+        .catch(async (err) => {
+          const e = new Error(
+            `deleteGroup SQL Server client connect error: ${err.message}`
+          );
+          await prisma.$disconnect();
+          return reject(e);
+        });
+    }); // Promise
+  } catch (err) {
+    throw new Error(`${action} error: ${err.message}`);
+  }
 };
 
 // =================================================
@@ -379,7 +473,42 @@ scimgateway.modifyGroup = async (baseEntity, id, attrObj, ctx) => {
       attrObj
     )}`
   );
-  throw new Error(`${action} error: ${action} is not supported`);
+
+  try {
+    return await new Promise((resolve, reject) => {
+      async function main() {
+        const updatedGroup = scimgateway.endpointMapper(
+          "outbound",
+          attrObj,
+          config.map.group
+        )[0];
+
+        await groupSchema.update({
+          where: scimgateway.endpointMapper(
+            "outbound",
+            { id },
+            config.map.group
+          )[0],
+          data: updatedGroup,
+        });
+      }
+
+      main()
+        .then(async () => {
+          await prisma.$disconnect();
+          resolve(null);
+        })
+        .catch(async (err) => {
+          const e = new Error(
+            `modifyGroup SQL Server client connect error: ${err.message}`
+          );
+          await prisma.$disconnect();
+          return reject(e);
+        });
+    }); // Promise
+  } catch (err) {
+    throw new Error(`${action} error: ${err.message}`);
+  }
 };
 
 // =================================================
@@ -395,4 +524,3 @@ process.on("SIGTERM", () => {
 process.on("SIGINT", () => {
   // Ctrl+C
 });
-
