@@ -1,32 +1,8 @@
-const { requests } = require("./requests");
+const { requests } = require("../../data/requests");
+const { formatAuth } = require("../../utils/formatAuth");
+const { formatURL } = require("../../utils/formatURL");
 
-function formatAuth(auth) {
-  switch (auth.type) {
-    case "bearer":
-      return "Bearer " + auth.token;
-    case "basic":
-      return "Basic " + btoa(`${auth.username}:${auth.password}`);
-    default:
-      return "";
-  }
-}
-
-// replacing {{text}} variables in string to body values
-function formatURL(body, url) {
-  const replaceKey = (match, key) => {
-    // Verify if key exists in body
-    if (body[key]) {
-      return body[key];
-    }
-
-    // throw an error if key does not exist
-    throw new Error(`Missing required field ${key} in body`);
-  };
-
-  return url.replace(/{{(.*?)}}/g, replaceKey);
-}
-
-async function fetchApi(ctx, next) {
+async function fetchApi(ctx, next, caches) {
   const results = await Promise.all(
     requests.map(async (request) => {
       if (ctx.request.header.host.split(":")[1] !== request.port) {
@@ -34,10 +10,17 @@ async function fetchApi(ctx, next) {
       }
 
       try {
+        let cachedData;
+        if (request.auth.cached) {
+          cachedData = await caches[request.auth.cached].getData();
+        }
+
         let formattedURL = formatURL(ctx.request.body, request.url);
         const response = await fetch(formattedURL, {
           method: request.method,
-          headers: { Authorization: formatAuth(request.auth) },
+          headers: {
+            Authorization: formatAuth({ ...request.auth, ...cachedData }),
+          },
         });
         const jsonData = await response.json();
 

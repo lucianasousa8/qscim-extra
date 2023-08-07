@@ -1,5 +1,5 @@
-const { createEngine } = require("./index");
-const { rules } = require("./rules");
+const { createEngine } = require("./engine");
+const { rules } = require("../../data/rules");
 
 async function verifyRules(ctx, next) {
   const results = await Promise.all(
@@ -32,8 +32,11 @@ async function verifyRules(ctx, next) {
     })
   );
 
-  return results.every((item) => item === true)
+  if (results.every((item) => item === true)) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 module.exports = { verifyRules };
-

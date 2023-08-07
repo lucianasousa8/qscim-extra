@@ -20,19 +20,6 @@ const scimgateway = new ScimGateway();
 const pluginName = path.basename(__filename, ".js");
 const configDir = path.join(__dirname, "..", "config");
 const configFile = path.join(`${configDir}`, `${pluginName}.json`);
-const validScimAttr = [
-  // array containing scim attributes supported by our plugin code. Empty array - all attrbutes are supported by endpoint
-  "userName", // userName is mandatory
-  "active", // active is mandatory
-  "password",
-  "name.givenName",
-  "name.middleName",
-  "name.familyName",
-  "id", // "emails",         // accepts all multivalues for this key
-  "emails.work", // accepts multivalues if type value equal work (lowercase)
-  // "phoneNumbers",
-  "phoneNumbers.work",
-];
 let config = require(configFile).endpoint;
 config = scimgateway.processExtConfig(pluginName, config); // add any external config process.env and process.file
 scimgateway.authPassThroughAllowed = false; // true enables auth passThrough (no scimgateway authentication). scimgateway instead includes ctx (ctx.request.header) in plugin methods. Note, requires plugin-logic for handling/passing ctx.request.header.authorization to be used in endpoint communication
@@ -48,6 +35,7 @@ if (config?.connection?.authentication?.options?.password) {
 
 const userSchema = prisma[config.connection.options.userTableName];
 const groupSchema = prisma[config.connection.options.groupTableName];
+const relationSchema = prisma[config.connection.options.relationTableName];
 
 // =================================================
 // getUsers
@@ -84,7 +72,7 @@ scimgateway.getUsers = async (baseEntity, getObj, attributes, ctx) => {
       filter = {
         ...scimgateway.endpointMapper(
           "outbound",
-          { id: getObj.value },
+          { userName: getObj.value },
           config.map.user
         )[0],
       };
@@ -132,7 +120,37 @@ scimgateway.getUsers = async (baseEntity, getObj, attributes, ctx) => {
             rows[row],
             config.map.user
           )[0];
-          ret.Resources.push(scimUser);
+
+          const userId = scimgateway.endpointMapper(
+            "outbound",
+            { id: scimUser.id },
+            config.map.user
+          )[0];
+
+          const relationId = scimgateway.endpointMapper(
+            "outbound",
+            userId,
+            config.map.relation
+          )[0];
+
+          const groups = await groupSchema.findMany({
+            where: { users: { some: relationId } },
+          });
+
+          const groupsList = groups.map((group) => {
+            const formattedGroup = scimgateway.endpointMapper(
+              "inbound",
+              group,
+              config.map.group
+            )[0];
+
+            return {
+              value: formattedGroup.id,
+              display: formattedGroup.displayName,
+            };
+          });
+
+          ret.Resources.push({ ...scimUser, groups: groupsList });
         }
       }
 
@@ -167,14 +185,6 @@ scimgateway.createUser = async (baseEntity, userObj, ctx) => {
 
   try {
     return await new Promise((resolve, reject) => {
-      // const notValid = scimgateway.notValidAttributes(userObj, validScimAttr);
-      // if (notValid) {
-      //   const err = Error(
-      //     `unsupported scim attributes: ${notValid} (supporting only these attributes: ${validScimAttr.toString()})`
-      //   );
-      //   return reject(err);
-      // }
-
       async function main() {
         const newUser = scimgateway.endpointMapper(
           "outbound",
@@ -182,7 +192,27 @@ scimgateway.createUser = async (baseEntity, userObj, ctx) => {
           config.map.user
         )[0];
 
-        await userSchema.create({ data: newUser });
+        const activeBody = scimgateway.endpointMapper(
+          "outbound",
+          { active: true },
+          config.map.user
+        )[0];
+
+        await userSchema
+          .update({
+            where: scimgateway.endpointMapper(
+              "outbound",
+              { userName: userObj.userName },
+              config.map.user
+            )[0],
+            data: { ...newUser, ...activeBody },
+          })
+          .then((res) => {
+            console.log("user already exists, updating");
+          })
+          .catch(async (err) => {
+            await userSchema.create({ data: newUser });
+          });
       }
 
       main()
@@ -218,7 +248,7 @@ scimgateway.deleteUser = async (baseEntity, id, ctx) => {
         await userSchema.delete({
           where: scimgateway.endpointMapper(
             "outbound",
-            { id },
+            { userName: id },
             config.map.user
           )[0],
         });
@@ -265,7 +295,7 @@ scimgateway.modifyUser = async (baseEntity, id, attrObj, ctx) => {
         await userSchema.update({
           where: scimgateway.endpointMapper(
             "outbound",
-            { id },
+            { userName: id },
             config.map.user
           )[0],
           data: updatedUser,
@@ -361,7 +391,37 @@ scimgateway.getGroups = async (baseEntity, getObj, attributes, ctx) => {
             rows[row],
             config.map.group
           )[0];
-          ret.Resources.push(scimGroup);
+
+          const groupId = scimgateway.endpointMapper(
+            "outbound",
+            { id: scimGroup.id },
+            config.map.group
+          )[0];
+
+          const relationId = scimgateway.endpointMapper(
+            "outbound",
+            groupId,
+            config.map.relation
+          )[0];
+
+          const users = await userSchema.findMany({
+            where: { groups: { some: relationId } },
+          });
+
+          const members = users.map((user) => {
+            const formattedUser = scimgateway.endpointMapper(
+              "inbound",
+              user,
+              config.map.user
+            )[0];
+
+            return {
+              value: formattedUser.id,
+              display: formattedUser.userName,
+            };
+          });
+
+          ret.Resources.push({ ...scimGroup, members });
         }
       }
 
@@ -482,6 +542,49 @@ scimgateway.modifyGroup = async (baseEntity, id, attrObj, ctx) => {
           attrObj,
           config.map.group
         )[0];
+
+        if (attrObj.members?.length) {
+          for (const memberIndex in attrObj.members) {
+            const member = attrObj.members[memberIndex];
+
+            const userFilter = scimgateway.endpointMapper(
+              "outbound",
+              { userName: member.value },
+              config.map.user
+            )[0];
+
+            const user = await userSchema.findFirst({
+              where: userFilter,
+            });
+
+            const groupId = scimgateway.endpointMapper(
+              "outbound",
+              { id: id },
+              config.map.group
+            )[0];
+
+            const relData = scimgateway.endpointMapper(
+              "outbound",
+              { ...user, ...groupId },
+              config.map.relation
+            )[0];
+
+            if (member.operation === "delete") {
+              await relationSchema.deleteMany({
+                where: relData,
+              });
+            } else {
+              const rel = await relationSchema.findFirst({ where: relData });
+              if (!rel) {
+                await relationSchema.create({
+                  data: relData,
+                });
+              } else {
+                console.log("relation already exists");
+              }
+            }
+          }
+        }
 
         await groupSchema.update({
           where: scimgateway.endpointMapper(
