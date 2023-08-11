@@ -1,6 +1,7 @@
 const { requests } = require("../../data/requests");
 const { formatAuth } = require("../../utils/formatAuth");
 const { formatURL } = require("../../utils/formatURL");
+const { getCacheInfo } = require("../../utils/getCacheInfo");
 
 async function fetchApi(ctx, next, caches) {
   const results = await Promise.all(
@@ -10,16 +11,14 @@ async function fetchApi(ctx, next, caches) {
       }
 
       try {
-        let cachedData;
-        if (request.auth.cached) {
-          cachedData = await caches[request.auth.cached].getData();
-        }
-
         let formattedURL = formatURL(ctx.request.body, request.url);
+
+        let formattedAuth = await getCacheInfo(request.auth, caches);
+
         const response = await fetch(formattedURL, {
           method: request.method,
           headers: {
-            Authorization: formatAuth({ ...request.auth, ...cachedData }),
+            Authorization: formatAuth(formattedAuth),
           },
         });
         const jsonData = await response.json();

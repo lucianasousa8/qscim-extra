@@ -640,7 +640,8 @@ app.use(cors({ origin: '*', credentials: true }));
     formTypes: { form: ['application/x-www-form-urlencoded'] },
     jsonLimit: (!config.payloadSize) ? undefined : config.payloadSize // default '1mb'
   }))
-  
+
+
   // Middleware
   app.use(async (ctx, next) => {
     return new Promise(async(resolve) => {
@@ -1371,12 +1372,12 @@ app.use(cors({ origin: '*', credentials: true }));
         scimdata = addSchemas(scimdata, handle.description, isScimv2)
         ctx.status = 200
         ctx.body = scimdata
-        await fetchNotification(ctx, 'onSuccess', caches)
+        await fetchNotification(ctx, 'onSuccess', caches, ScimGateway.prototype.convertedScim20(ctx.request.body))
       } catch (err) {
         ctx.status = 500
         const e = jsonErr(config.scim.version, pluginName, ctx.status, err)
         ctx.body = e
-        await fetchNotification(ctx, 'onError', caches)
+        await fetchNotification(ctx, 'onError', caches, ScimGateway.prototype.convertedScim20(ctx.request.body))
       }
     }
   }) // patch
@@ -1830,6 +1831,7 @@ app.use(cors({ origin: '*', credentials: true }));
       // none SSL
       server = http.createServer(app.callback()).listen(config.port, 'localhost')
       logger.info(`${gwName}[${pluginName}] now listening SCIM ${config.scim.version} on port ${config.port}...\n`)
+
     }
   } else {
     logger.info(`${gwName}[${pluginName}] accepting requests from all clients`)
@@ -2939,6 +2941,14 @@ ScimGateway.prototype.convertedScim20 = function convertedScim20 (obj) {
         else scimdata[key][index].type = primaryOrgType[key]
       }
     }
+  }
+  
+  if(scimdata.members){
+    scimdata.members = scimdata.members.map((item) => {
+      item.operation = item.operation || 'add'
+
+      return item
+    })
   }
 
   // scimdata now SCIM 1.1 formatted, using convertedScim to get "type converted Object" and blank deleted values

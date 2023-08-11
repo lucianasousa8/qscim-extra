@@ -1,6 +1,7 @@
 const { notifications } = require("../../data/notifications");
 const { formatAuth } = require("../../utils/formatAuth");
 const { formatURL } = require("../../utils/formatURL");
+const { getCacheInfo } = require("../../utils/getCacheInfo");
 
 function verifyAllowedRequests(allowedRequests, method, route) {
   const results = allowedRequests.map(
@@ -10,31 +11,42 @@ function verifyAllowedRequests(allowedRequests, method, route) {
   return results.some((item) => item === true);
 }
 
-async function fetchNotification(ctx, type, caches) {
+async function fetchNotification(ctx, type, caches, scimData) {
   const results = await Promise.all(
     notifications
       .filter(
         (request) =>
-          request.port === ctx.request.header.host.split(":")[1] &&
+          ctx.request.header.host.split(":")[1] === request.port &&
           request.type === type &&
           verifyAllowedRequests(
-            request.allowedRequests,
+            request.allowed_requests,
             ctx.request.method,
-            ctx.request.url.split("/")[1]
+            ctx.request.url.split("/")[1].toLowerCase()
           )
       )
       .map(async (request) => {
-        try {
-          let cachedData;
-          if (request.auth.cached) {
-            cachedData = await caches[request.auth.cached].getData();
-          }
+        const hasScimData = scimData && scimData.length;
+        let formattedBody = hasScimData ? scimData[0] : ctx.request.body;
 
-          let formattedURL = formatURL(ctx.request.body, request.url);
+        if (ctx.request.url.split("/").length > 2) {
+          formattedBody.userName =
+            formattedBody?.userName || ctx.request.url.split("/").at(-1);
+        }
+
+        try {
+          let formattedURL = formatURL(
+            ctx.request.body,
+            request.useURL
+              ? `${request.url}${ctx.request.url}`
+              : `${request.url}`
+          );
+
+          let formattedAuth = await getCacheInfo(request.auth, caches);
+
           const response = await fetch(formattedURL, {
             method: request.method,
             headers: {
-              Authorization: formatAuth({ ...request.auth, ...cachedData }),
+              Authorization: formatAuth(formattedAuth),
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
@@ -43,8 +55,7 @@ async function fetchNotification(ctx, type, caches) {
                 method: ctx.request.method,
                 type: request.type,
               },
-              data:
-                request.payload === "response" ? ctx.body : ctx.request.body,
+              data: request.payload === "response" ? ctx.body : formattedBody,
             }),
           });
 
@@ -54,6 +65,7 @@ async function fetchNotification(ctx, type, caches) {
 
           return true;
         } catch (error) {
+          console.log(error);
           ctx.status = 400;
           ctx.body = {
             message: "Error while fetching notification api",
@@ -62,7 +74,10 @@ async function fetchNotification(ctx, type, caches) {
               request.type === "before"
                 ? "SCIM request not fetched yet"
                 : "SCIM request already fetched",
-            url: request.url,
+            url: formatURL(
+              ctx.request.body,
+              `${request.url}${ctx.request.url}`
+            ),
             error: error.message,
           };
           return ctx;
