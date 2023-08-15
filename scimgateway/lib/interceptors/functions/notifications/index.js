@@ -3,9 +3,9 @@ const { formatAuth } = require("../../utils/formatAuth");
 const { formatURL } = require("../../utils/formatURL");
 const { getCacheInfo } = require("../../utils/getCacheInfo");
 
-function verifyAllowedRequests(allowedRequests, method, route) {
+function verifyAllowedRequests(allowedRequests, method, path) {
   const results = allowedRequests.map(
-    (item) => item.method === method && item.route === route
+    (item) => item.method === method && item.path === path
   );
 
   return results.some((item) => item === true);
