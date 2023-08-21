@@ -153,6 +153,7 @@ buton:disabled {
   border-radius: 16px;
   box-shadow: 1px 1px 5px var(--shadow-color);
   min-width: 400px;
+  margin-bottom: 20px;
 }
 
 .submit-btn {
@@ -164,6 +165,8 @@ buton:disabled {
   /* width: 300px; */
   gap: 0.5rem;
   align-items: center;
+  margin: 10px;
+
 }
 
 /* ----------------------------------- */
@@ -230,4 +233,29 @@ input:checked + .slider:before {
 
 .slider.round:before {
   border-radius: 50%;
+}
+
+.response-card {
+  background-color: white;
+  border-radius: 16px;
+  box-shadow: 1px 1px 5px var(--shadow-color);
+  padding: 16px;
+  text-align: center;
+  max-width: 80%;
+  margin: auto;
+  margin-top: 20px;
+  justify-content: center;
+  display: flex;
+  align-items: center;
+}
+
+.card-content {
+  text-align: center;
+}
+
+.buttons {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
 }
