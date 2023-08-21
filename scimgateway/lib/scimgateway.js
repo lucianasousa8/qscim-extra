@@ -2283,7 +2283,7 @@ ScimGateway.prototype.endpointMapper = async function endpointMapper (direction,
         let deafultValue = mapObj[mapKey].default
         if(deafultValue !== undefined){        
           let expression = jsonata(deafultValue);
-          let result = await expression.evaluate(parseObj);
+          let result = await expression.evaluate(parseObj) || '';
           if(result.toString().trim().length && !dotParse[mapObj[mapKey].mapTo]) {
             dotParse[mapObj[mapKey].mapTo] = result
           }
