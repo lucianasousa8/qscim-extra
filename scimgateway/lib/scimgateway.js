@@ -11,6 +11,7 @@
 'use strict'
 
 const http = require('http')
+const jsonata = require('jsonata')
 const https = require('https')
 const Koa = require('koa')
 const cors = require('koa-cors')
@@ -944,7 +945,11 @@ app.use(cors({ origin: '*', credentials: true }));
     '/:baseEntity/(|scim/)(Users|Groups|servicePlans)'], async (ctx) => {
     if (ctx.query.attributes) ctx.query.attributes = ctx.query.attributes.split(',').map(item => item.trim()).join()
     if (ctx.query.excludedAttributes) ctx.query.excludedAttributes = ctx.query.excludedAttributes.split(',').map(item => item.trim()).join()
+    if(ctx.originalUrl.at(-1) === '/'){
+      ctx.originalUrl = ctx.originalUrl.slice(0, ctx.originalUrl.length-1)
+    }
     let u = ctx.originalUrl.substr(ctx.originalUrl.lastIndexOf('/') + 1) // u = Users, Groups, servicePlans, ...
+    
     const ui = u.indexOf('?')
     if (ui > 0) u = u.substr(0, ui)
     const handle = handler[u]
@@ -2227,7 +2232,7 @@ ScimGateway.prototype.processExtConfig = function processExtConfig (pluginName, 
 // SCIM/CustomScim <=> endpoint attribute parsing used by plugins
 // returns [object/string, err]
 // TO-DO: rewrite and simplify...
-ScimGateway.prototype.endpointMapper = function endpointMapper (direction, parseObj, mapObj) {
+ScimGateway.prototype.endpointMapper = async function endpointMapper (direction, parseObj, mapObj) {
   const dotMap = dot.dot(mapObj)
   let str = ''
   let isObj = false
@@ -2274,6 +2279,16 @@ ScimGateway.prototype.endpointMapper = function endpointMapper (direction, parse
 
   switch (direction) {
     case 'outbound':
+      for(const mapKey in mapObj){
+        let deafultValue = mapObj[mapKey].default
+        if(deafultValue !== undefined){        
+          let expression = jsonata(deafultValue);
+          let result = await expression.evaluate(parseObj);
+          if(result.toString().trim().length && !dotParse[mapObj[mapKey].mapTo]) {
+            dotParse[mapObj[mapKey].mapTo] = result
+          }
+        }
+      }
       if (isObj) { // body (patch/put)
         for (let key in dotParse) {
           let found = false

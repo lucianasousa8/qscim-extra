@@ -212,7 +212,7 @@ scimgateway.getUsers = async (baseEntity, getObj, attributes) => {
       throw new Error(`invalid response: ${JSON.stringify(response)}`)
     }
     for (let i = 0; i < response.body.value.length; ++i) { // map to corresponding inbound
-      const [scimObj] = scimgateway.endpointMapper('inbound', response.body.value[i], config.map.user) // endpoint => SCIM/CustomSCIM attribute standard
+      const [scimObj] = await scimgateway.endpointMapper('inbound', response.body.value[i], config.map.user) // endpoint => SCIM/CustomSCIM attribute standard
       if (scimObj && typeof scimObj === 'object' && Object.keys(scimObj).length > 0) ret.Resources.push(scimObj)
     }
     if (getObj.startIndex && getObj.count) {
@@ -245,7 +245,7 @@ scimgateway.createUser = async (baseEntity, userObj) => {
 
   const method = 'POST'
   const path = '/users'
-  const [body] = scimgateway.endpointMapper('outbound', userObj, config.map.user)
+  const [body] = await scimgateway.endpointMapper('outbound', userObj, config.map.user)
 
   try {
     await doRequest(baseEntity, method, path, body)
@@ -295,7 +295,7 @@ scimgateway.modifyUser = async (baseEntity, id, attrObj) => {
     })
     delete attrObj.servicePlan
   }
-  const [parsedAttrObj] = scimgateway.endpointMapper('outbound', attrObj, config.map.user) // SCIM/CustomSCIM => endpoint attribute standard
+  const [parsedAttrObj] = await scimgateway.endpointMapper('outbound', attrObj, config.map.user) // SCIM/CustomSCIM => endpoint attribute standard
   if (parsedAttrObj instanceof Error) throw (parsedAttrObj) // error object
 
   const objManager = {}
@@ -546,7 +546,7 @@ scimgateway.getGroups = async (baseEntity, getObj, attributes) => {
     includeMembers = true
   }
 
-  const [attrs] = scimgateway.endpointMapper('outbound', attributes, config.map.group)
+  const [attrs] = await scimgateway.endpointMapper('outbound', attributes, config.map.group)
   const method = 'GET'
   const body = null
   let path
@@ -622,7 +622,7 @@ scimgateway.getGroups = async (baseEntity, getObj, attributes) => {
         delete response.body.value[i].members
       }
 
-      const [scimObj] = scimgateway.endpointMapper('inbound', response.body.value[i], config.map.group) // endpoint => SCIM/CustomSCIM attribute standard
+      const [scimObj] = await scimgateway.endpointMapper('inbound', response.body.value[i], config.map.group) // endpoint => SCIM/CustomSCIM attribute standard
       if (scimObj && typeof scimObj === 'object' && Object.keys(scimObj).length > 0) {
         if (members) scimObj.members = members
         ret.Resources.push(scimObj)
@@ -816,8 +816,8 @@ scimgateway.getServicePlans = async (baseEntity, getObj, attributes) => {
         throw new Error('got empty response on REST request')
       }
 
-      const [arrOutbound] = (scimgateway.endpointMapper('outbound', attributes, config.map.licenseDetails))
-      const [arrInbound] = (scimgateway.endpointMapper('inbound', attributes, config.map.licenseDetails))
+      const [arrOutbound] = await (scimgateway.endpointMapper('outbound', attributes, config.map.licenseDetails))
+      const [arrInbound] = await (scimgateway.endpointMapper('inbound', attributes, config.map.licenseDetails))
 
       const arr = getObj.value.split('::') // servicePlaneName
       const skuPartNumber = arr[0]

@@ -33,7 +33,7 @@ const FlatDB = require("flat-db");
 
 // configure path to storage dir
 FlatDB.configure({
-  dir: `/home/node/app/data`,
+  dir: `/opt/qscim/data/${config.connection.workspace}/data`,
 });
 
 function getDefaultSchemaValue(type) {
@@ -57,10 +57,8 @@ Object.keys(config.map.user).forEach((item, index) => {
   }
 });
 
-console.log(userSchema);
-
 // create user collection with schema
-const User = new FlatDB.Collection(config.connection.fileName, userSchema);
+const User = new FlatDB.Collection(config.connection.title, userSchema);
 
 // =================================================
 // getUsers
@@ -96,11 +94,9 @@ scimgateway.getUsers = async (baseEntity, getObj, attributes, ctx) => {
       // mandatory - unique filtering - single unique user to be returned - correspond to getUser() in versions < 4.x.x
 
       filter = {
-        ...scimgateway.endpointMapper(
-          "outbound",
-          { id: getObj.value },
-          config.map.user
-        )[0],
+        ...(await scimgateway
+          .endpointMapper("outbound", { id: getObj.value }, config.map.user)
+          .then((res) => res[0])),
       };
     } else if (getObj.operator === "eq" && getObj.attribute === "group.value") {
       // optional - only used when groups are member of users, not default behavior - correspond to getGroupUsers() in versions < 4.x.x
@@ -148,19 +144,15 @@ scimgateway.getUsers = async (baseEntity, getObj, attributes, ctx) => {
         }
 
         for (const row in users) {
-          const scimUser = scimgateway.endpointMapper(
-            "inbound",
-            users[row],
-            config.map.user
-          )[0];
+          const scimUser = await scimgateway
+            .endpointMapper("inbound", users[row], config.map.user)
+            .then((res) => res[0]);
           ret.Resources.push(scimUser);
         }
       }
 
       main()
         .then(async () => {
-          //then function
-
           resolve(ret); // all explored users
         })
         .catch(async (err) => {
@@ -189,22 +181,17 @@ scimgateway.createUser = async (baseEntity, userObj, ctx) => {
   );
 
   try {
-    return await new Promise((resolve, reject) => {
-      const body = scimgateway.endpointMapper(
-        "outbound",
-        userObj,
-        config.map.user
-      )[0];
+    return await new Promise(async (resolve, reject) => {
+      const body = await scimgateway
+        .endpointMapper("outbound", userObj, config.map.user)
+        .then((res) => res[0]);
 
       async function main() {
-        // create function (body)
-        const removing = User.add(body);
+        await User.add(body);
       }
 
       main()
         .then(async () => {
-          //then function
-
           resolve(null);
         })
         .catch(async (err) => {
@@ -232,21 +219,12 @@ scimgateway.deleteUser = async (baseEntity, id, ctx) => {
 
   try {
     return await new Promise((resolve, reject) => {
-      let formattedId = scimgateway.endpointMapper(
-        "outbound",
-        { id },
-        config.map.user
-      )[0];
-
       async function main() {
-        // delete function (id, formattedId)
-        const removing = User.remove(id);
+        await User.remove(id);
       }
 
       main()
         .then(async () => {
-          //then function
-
           resolve(null);
         })
         .catch(async (err) => {
@@ -275,27 +253,17 @@ scimgateway.modifyUser = async (baseEntity, id, attrObj, ctx) => {
   );
 
   try {
-    return await new Promise((resolve, reject) => {
-      const body = scimgateway.endpointMapper(
-        "outbound",
-        attrObj,
-        config.map.user
-      )[0];
-
-      let formattedId = scimgateway.endpointMapper(
-        "outbound",
-        { id },
-        config.map.user
-      )[0];
+    return await new Promise(async (resolve, reject) => {
+      const body = await scimgateway
+        .endpointMapper("outbound", attrObj, config.map.user)
+        .then((res) => res[0]);
 
       async function main() {
-        const updating = User.update(id, body);
+        await User.update(id, body);
       }
 
       main()
         .then(async () => {
-          //then function
-
           resolve(null);
         })
         .catch(async (err) => {
@@ -370,19 +338,15 @@ scimgateway.getGroups = async (baseEntity, getObj, attributes, ctx) => {
         // get function (filter) (must return groups)
 
         for (const row in groups) {
-          const scimGroup = scimgateway.endpointMapper(
-            "inbound",
-            groups[row],
-            config.map.group
-          )[0];
+          const scimGroup = await scimgateway
+            .endpointMapper("inbound", groups[row], config.map.group)
+            .then((res) => res[0]);
           ret.Resources.push(scimGroup);
         }
       }
 
       main()
         .then(async () => {
-          //then function
-
           resolve(ret); // all explored groups
         })
         .catch(async (err) => {
@@ -411,12 +375,10 @@ scimgateway.createGroup = async (baseEntity, groupObj, ctx) => {
   );
 
   try {
-    return await new Promise((resolve, reject) => {
-      const body = scimgateway.endpointMapper(
-        "outbound",
-        groupObj,
-        config.map.group
-      )[0];
+    return await new Promise(async (resolve, reject) => {
+      const body = await scimgateway
+        .endpointMapper("outbound", groupObj, config.map.group)
+        .then((res) => res[0]);
 
       async function main() {
         // create function (body)
@@ -424,8 +386,6 @@ scimgateway.createGroup = async (baseEntity, groupObj, ctx) => {
 
       main()
         .then(async () => {
-          //then function
-
           resolve(null);
         })
         .catch(async (err) => {
@@ -452,12 +412,10 @@ scimgateway.deleteGroup = async (baseEntity, id, ctx) => {
   );
 
   try {
-    return await new Promise((resolve, reject) => {
-      let formattedId = scimgateway.endpointMapper(
-        "outbound",
-        { id },
-        config.map.group
-      )[0];
+    return await new Promise(async (resolve, reject) => {
+      let formattedId = await scimgateway
+        .endpointMapper("outbound", { id }, config.map.group)
+        .then((res) => res[0]);
 
       async function main() {
         // delete function (id, formattedId)
@@ -465,8 +423,6 @@ scimgateway.deleteGroup = async (baseEntity, id, ctx) => {
 
       main()
         .then(async () => {
-          //then function
-
           resolve(null);
         })
         .catch(async (err) => {
@@ -495,18 +451,18 @@ scimgateway.modifyGroup = async (baseEntity, id, attrObj, ctx) => {
   );
 
   try {
-    return await new Promise((resolve, reject) => {
-      const body = scimgateway.endpointMapper(
+    return await new Promise(async (resolve, reject) => {
+      const body = await scimgateway.endpointMapper(
         "outbound",
         attrObj,
         config.map.group
-      )[0];
+      ).then((res) => res[0]);
 
-      let formattedId = scimgateway.endpointMapper(
+      let formattedId = await scimgateway.endpointMapper(
         "outbound",
         { id },
         config.map.group
-      )[0];
+      ).then((res) => res[0]);
 
       async function main() {
         // update function (body, id, formattedId)
@@ -514,8 +470,6 @@ scimgateway.modifyGroup = async (baseEntity, id, attrObj, ctx) => {
 
       main()
         .then(async () => {
-          //then function
-
           resolve(null);
         })
         .catch(async (err) => {

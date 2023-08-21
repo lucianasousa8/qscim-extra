@@ -68,11 +68,9 @@ scimgateway.getUsers = async (baseEntity, getObj, attributes, ctx) => {
       // mandatory - unique filtering - single unique user to be returned - correspond to getUser() in versions < 4.x.x
 
       filter = {
-        ...scimgateway.endpointMapper(
-          "outbound",
-          { id: getObj.value },
-          config.map.user
-        )[0],
+        ...(await scimgateway
+          .endpointMapper("outbound", { id: getObj.value }, config.map.user)
+          .then((res) => res[0])),
       };
     } else if (getObj.operator === "eq" && getObj.attribute === "group.value") {
       // optional - only used when groups are member of users, not default behavior - correspond to getGroupUsers() in versions < 4.x.x
@@ -125,11 +123,9 @@ scimgateway.getUsers = async (baseEntity, getObj, attributes, ctx) => {
           : await prisma.$queryRawUnsafe(getAllScript);
 
         for (const row in rows) {
-          const scimUser = scimgateway.endpointMapper(
-            "inbound",
-            rows[row],
-            config.map.user
-          )[0];
+          const scimUser = await scimgateway
+            .endpointMapper("inbound", rows[row], config.map.user)
+            .then((res) => res[0]);
           ret.Resources.push(scimUser);
         }
       }
@@ -166,11 +162,9 @@ scimgateway.createUser = async (baseEntity, userObj, ctx) => {
   try {
     return await new Promise((resolve, reject) => {
       async function main() {
-        const body = scimgateway.endpointMapper(
-          "outbound",
-          userObj,
-          config.map.user
-        )[0];
+        const body = await scimgateway
+          .endpointMapper("outbound", userObj, config.map.user)
+          .then((res) => res[0]);
 
         const script = replaceValues(config.scripts.users.post, {
           columns: `(${Object.keys(body).join(", ")})`,
@@ -212,11 +206,9 @@ scimgateway.deleteUser = async (baseEntity, id, ctx) => {
   try {
     return await new Promise((resolve, reject) => {
       async function main() {
-        let formattedId = scimgateway.endpointMapper(
-          "outbound",
-          { id },
-          config.map.user
-        )[0];
+        let formattedId = await scimgateway
+          .endpointMapper("outbound", { id }, config.map.user)
+          .then((res) => res[0]);
 
         const script = replaceValues(config.scripts.users.delete, {
           filter: convertObjectToString(formattedId),
@@ -258,17 +250,13 @@ scimgateway.modifyUser = async (baseEntity, id, attrObj, ctx) => {
   try {
     return await new Promise((resolve, reject) => {
       async function main() {
-        const body = scimgateway.endpointMapper(
-          "outbound",
-          attrObj,
-          config.map.user
-        )[0];
+        const body = await scimgateway
+          .endpointMapper("outbound", attrObj, config.map.user)
+          .then((res) => res[0]);
 
-        let formattedId = scimgateway.endpointMapper(
-          "outbound",
-          { id },
-          config.map.user
-        )[0];
+        let formattedId = await scimgateway
+          .endpointMapper("outbound", { id }, config.map.user)
+          .then((res) => res[0]);
 
         const script = replaceValues(config.scripts.users.put, {
           filter: convertObjectToString(formattedId),

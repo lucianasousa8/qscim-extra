@@ -41,12 +41,10 @@ scimgateway.createUser = async (baseEntity, userObj, ctx) => {
   );
 
   try {
-    return await new Promise((resolve, reject) => {
-      const body = scimgateway.endpointMapper(
-        "outbound",
-        userObj,
-        config.map.user
-      )[0];
+    return await new Promise(async (resolve, reject) => {
+      const body = await scimgateway
+        .endpointMapper("outbound", userObj, config.map.user)
+        .then((res) => res[0]);
 
       async function main() {
         const method = "POST";
@@ -83,12 +81,10 @@ scimgateway.modifyUser = async (baseEntity, id, attrObj, ctx) => {
   );
 
   try {
-    return await new Promise((resolve, reject) => {
-      const body = scimgateway.endpointMapper(
-        "outbound",
-        attrObj,
-        config.map.user
-      )[0];
+    return await new Promise(async (resolve, reject) => {
+      const body = await scimgateway
+        .endpointMapper("outbound", attrObj, config.map.user)
+        .then((res) => res[0]);
 
       async function main() {
         const method = "PUT";
@@ -200,11 +196,9 @@ scimgateway.getUsers = async (baseEntity, getObj, attributes, ctx) => {
 
         let rows = await getRequest();
         for (const row in rows) {
-          const scimUser = scimgateway.endpointMapper(
-            "inbound",
-            rows[row],
-            config.map.user
-          )[0];
+          const scimUser = await scimgateway
+            .endpointMapper("inbound", rows[row], config.map.user)
+            .then((res) => res[0]);
           ret.Resources.push(scimUser);
         }
       }
@@ -273,12 +267,10 @@ scimgateway.createGroup = async (baseEntity, groupObj, ctx) => {
   );
 
   try {
-    return await new Promise((resolve, reject) => {
-      const body = scimgateway.endpointMapper(
-        "outbound",
-        groupObj,
-        config.map.group
-      )[0];
+    return await new Promise(async (resolve, reject) => {
+      const body = await scimgateway
+        .endpointMapper("outbound", groupObj, config.map.group)
+        .then((res) => res[0]);
 
       async function main() {
         const method = "POST";
@@ -315,12 +307,10 @@ scimgateway.modifyGroup = async (baseEntity, id, attrObj, ctx) => {
   );
 
   try {
-    return await new Promise((resolve, reject) => {
-      const body = scimgateway.endpointMapper(
-        "outbound",
-        attrObj,
-        config.map.group
-      )[0];
+    return await new Promise(async (resolve, reject) => {
+      const body = await scimgateway
+        .endpointMapper("outbound", attrObj, config.map.group)
+        .then((res) => res[0]);
 
       async function main() {
         const method = "PUT";
@@ -432,11 +422,9 @@ scimgateway.getGroups = async (baseEntity, getObj, attributes, ctx) => {
 
         let rows = await getRequest();
         for (const row in rows) {
-          const scimGroup = scimgateway.endpointMapper(
-            "inbound",
-            rows[row],
-            config.map.group
-          )[0];
+          const scimGroup = await scimgateway
+            .endpointMapper("inbound", rows[row], config.map.group)
+            .then((res) => res[0]);
           ret.Resources.push(scimGroup);
         }
       }

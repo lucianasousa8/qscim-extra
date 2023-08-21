@@ -70,11 +70,13 @@ scimgateway.getUsers = async (baseEntity, getObj, attributes, ctx) => {
     ) {
       // mandatory - unique filtering - single unique user to be returned - correspond to getUser() in versions < 4.x.x
       filter = {
-        ...scimgateway.endpointMapper(
-          "outbound",
-          { userName: getObj.value },
-          config.map.user
-        )[0],
+        ...(await scimgateway
+          .endpointMapper(
+            "outbound",
+            { userName: getObj.value },
+            config.map.user
+          )
+          .then((res) => res[0])),
       };
     } else if (getObj.operator === "eq" && getObj.attribute === "group.value") {
       // optional - only used when groups are member of users, not default behavior - correspond to getGroupUsers() in versions < 4.x.x
@@ -115,34 +117,26 @@ scimgateway.getUsers = async (baseEntity, getObj, attributes, ctx) => {
         const rows = await userSchema.findMany({ where: filter });
 
         for (const row in rows) {
-          const scimUser = scimgateway.endpointMapper(
-            "inbound",
-            rows[row],
-            config.map.user
-          )[0];
+          const scimUser = await scimgateway
+            .endpointMapper("inbound", rows[row], config.map.user)
+            .then((res) => res[0]);
 
-          const userId = scimgateway.endpointMapper(
-            "outbound",
-            { id: scimUser.id },
-            config.map.user
-          )[0];
+          const userId = await scimgateway
+            .endpointMapper("outbound", { id: scimUser.id }, config.map.user)
+            .then((res) => res[0]);
 
-          const relationId = scimgateway.endpointMapper(
-            "outbound",
-            userId,
-            config.map.relation
-          )[0];
+          const relationId = await scimgateway
+            .endpointMapper("outbound", userId, config.map.relation)
+            .then((res) => res[0]);
 
           const groups = await groupSchema.findMany({
             where: { users: { some: relationId } },
           });
 
-          const groupsList = groups.map((group) => {
-            const formattedGroup = scimgateway.endpointMapper(
-              "inbound",
-              group,
-              config.map.group
-            )[0];
+          const groupsList = await groups.map(async (group) => {
+            const formattedGroup = await scimgateway
+              .endpointMapper("inbound", group, config.map.group)
+              .then((res) => res[0]);
 
             return {
               value: formattedGroup.id,
@@ -150,6 +144,7 @@ scimgateway.getUsers = async (baseEntity, getObj, attributes, ctx) => {
             };
           });
 
+          scimUser.id = scimUser.userName;
           ret.Resources.push({ ...scimUser, groups: groupsList });
         }
       }
@@ -186,31 +181,30 @@ scimgateway.createUser = async (baseEntity, userObj, ctx) => {
   try {
     return await new Promise((resolve, reject) => {
       async function main() {
-        const newUser = scimgateway.endpointMapper(
-          "outbound",
-          userObj,
-          config.map.user
-        )[0];
+        const newUser = await scimgateway
+          .endpointMapper("outbound", userObj, config.map.user)
+          .then((res) => res[0]);
 
-        const activeBody = scimgateway.endpointMapper(
-          "outbound",
-          { active: true },
-          config.map.user
-        )[0];
+        const activeBody = await scimgateway
+          .endpointMapper("outbound", { active: true }, config.map.user)
+          .then((res) => res[0]);
 
         await userSchema
           .update({
-            where: scimgateway.endpointMapper(
-              "outbound",
-              { userName: userObj.userName },
-              config.map.user
-            )[0],
+            where: await scimgateway
+              .endpointMapper(
+                "outbound",
+                { userName: userObj.userName },
+                config.map.user
+              )
+              .then((res) => res[0]),
             data: { ...newUser, ...activeBody },
           })
           .then((res) => {
             console.log("user already exists, updating");
           })
           .catch(async (err) => {
+            console.log("creating new user");
             await userSchema.create({ data: newUser });
           });
       }
@@ -246,11 +240,9 @@ scimgateway.deleteUser = async (baseEntity, id, ctx) => {
     return await new Promise((resolve, reject) => {
       async function main() {
         await userSchema.delete({
-          where: scimgateway.endpointMapper(
-            "outbound",
-            { userName: id },
-            config.map.user
-          )[0],
+          where: await scimgateway
+            .endpointMapper("outbound", { userName: id }, config.map.user)
+            .then((res) => res[0]),
         });
       }
 
@@ -286,18 +278,15 @@ scimgateway.modifyUser = async (baseEntity, id, attrObj, ctx) => {
   try {
     return await new Promise((resolve, reject) => {
       async function main() {
-        const updatedUser = scimgateway.endpointMapper(
-          "outbound",
-          attrObj,
-          config.map.user
-        )[0];
+        console.log("user updated");
+        const updatedUser = await scimgateway
+          .endpointMapper("outbound", attrObj, config.map.user)
+          .then((res) => res[0]);
 
         await userSchema.update({
-          where: scimgateway.endpointMapper(
-            "outbound",
-            { userName: id },
-            config.map.user
-          )[0],
+          where: await scimgateway
+            .endpointMapper("outbound", { userName: id }, config.map.user)
+            .then((res) => res[0]),
           data: updatedUser,
         });
       }
@@ -352,11 +341,9 @@ scimgateway.getGroups = async (baseEntity, getObj, attributes, ctx) => {
     ) {
       // mandatory - unique filtering - single unique user to be returned - correspond to getUser() in versions < 4.x.x
       filter = {
-        ...scimgateway.endpointMapper(
-          "outbound",
-          { id: getObj.value },
-          config.map.group
-        )[0],
+        ...(await scimgateway
+          .endpointMapper("outbound", { id: getObj.value }, config.map.group)
+          .then((res) => res[0])),
       };
     } else if (
       getObj.operator === "eq" &&
@@ -386,34 +373,26 @@ scimgateway.getGroups = async (baseEntity, getObj, attributes, ctx) => {
         const rows = await groupSchema.findMany({ where: filter });
 
         for (const row in rows) {
-          const scimGroup = scimgateway.endpointMapper(
-            "inbound",
-            rows[row],
-            config.map.group
-          )[0];
+          const scimGroup = await scimgateway
+            .endpointMapper("inbound", rows[row], config.map.group)
+            .then((res) => res[0]);
 
-          const groupId = scimgateway.endpointMapper(
-            "outbound",
-            { id: scimGroup.id },
-            config.map.group
-          )[0];
+          const groupId = await scimgateway
+            .endpointMapper("outbound", { id: scimGroup.id }, config.map.group)
+            .then((res) => res[0]);
 
-          const relationId = scimgateway.endpointMapper(
-            "outbound",
-            groupId,
-            config.map.relation
-          )[0];
+          const relationId = await scimgateway
+            .endpointMapper("outbound", groupId, config.map.relation)
+            .then((res) => res[0]);
 
           const users = await userSchema.findMany({
             where: { groups: { some: relationId } },
           });
 
-          const members = users.map((user) => {
-            const formattedUser = scimgateway.endpointMapper(
-              "inbound",
-              user,
-              config.map.user
-            )[0];
+          const members = await users.map(async (user) => {
+            const formattedUser = await scimgateway
+              .endpointMapper("inbound", user, config.map.user)
+              .then((res) => res[0]);
 
             return {
               value: formattedUser.id,
@@ -457,11 +436,9 @@ scimgateway.createGroup = async (baseEntity, groupObj, ctx) => {
   try {
     return await new Promise((resolve, reject) => {
       async function main() {
-        const newGroup = scimgateway.endpointMapper(
-          "outbound",
-          groupObj,
-          config.map.group
-        )[0];
+        const newGroup = await scimgateway
+          .endpointMapper("outbound", groupObj, config.map.group)
+          .then((res) => res[0]);
 
         await groupSchema.create({ data: newGroup });
       }
@@ -497,11 +474,9 @@ scimgateway.deleteGroup = async (baseEntity, id, ctx) => {
     return await new Promise((resolve, reject) => {
       async function main() {
         await groupSchema.delete({
-          where: scimgateway.endpointMapper(
-            "outbound",
-            { id },
-            config.map.group
-          )[0],
+          where: await scimgateway
+            .endpointMapper("outbound", { id }, config.map.group)
+            .then((res) => res[0]),
         });
       }
 
@@ -537,37 +512,37 @@ scimgateway.modifyGroup = async (baseEntity, id, attrObj, ctx) => {
   try {
     return await new Promise((resolve, reject) => {
       async function main() {
-        const updatedGroup = scimgateway.endpointMapper(
-          "outbound",
-          attrObj,
-          config.map.group
-        )[0];
+        const updatedGroup = await scimgateway
+          .endpointMapper("outbound", attrObj, config.map.group)
+          .then((res) => res[0]);
 
         if (attrObj.members?.length) {
           for (const memberIndex in attrObj.members) {
             const member = attrObj.members[memberIndex];
 
-            const userFilter = scimgateway.endpointMapper(
-              "outbound",
-              { userName: member.value },
-              config.map.user
-            )[0];
+            const userFilter = await scimgateway
+              .endpointMapper(
+                "outbound",
+                { userName: member.value },
+                config.map.user
+              )
+              .then((res) => res[0]);
 
             const user = await userSchema.findFirst({
               where: userFilter,
             });
 
-            const groupId = scimgateway.endpointMapper(
-              "outbound",
-              { id: id },
-              config.map.group
-            )[0];
+            const groupId = await scimgateway
+              .endpointMapper("outbound", { id: id }, config.map.group)
+              .then((res) => res[0]);
 
-            const relData = scimgateway.endpointMapper(
-              "outbound",
-              { ...user, ...groupId },
-              config.map.relation
-            )[0];
+            const relData = await scimgateway
+              .endpointMapper(
+                "outbound",
+                { ...user, ...groupId },
+                config.map.relation
+              )
+              .then((res) => res[0]);
 
             if (member.operation === "delete") {
               await relationSchema.deleteMany({
@@ -587,11 +562,9 @@ scimgateway.modifyGroup = async (baseEntity, id, attrObj, ctx) => {
         }
 
         await groupSchema.update({
-          where: scimgateway.endpointMapper(
-            "outbound",
-            { id },
-            config.map.group
-          )[0],
+          where: await scimgateway
+            .endpointMapper("outbound", { id }, config.map.group)
+            .then((res) => res[0]),
           data: updatedGroup,
         });
       }
